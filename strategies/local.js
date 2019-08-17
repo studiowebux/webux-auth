@@ -1,4 +1,5 @@
 // TODO ADD HEADER
+"use strict";
 
 const LocalStrategy = require("passport-local").Strategy;
 const { checkPassword } = require("../lib/passwordStrategy");

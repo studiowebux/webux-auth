@@ -1,8 +1,8 @@
 // TODO - EVERYTHING !
-
+/*
 const FacebookStrategy = require("passport-facebook").Strategy;
 
-/* PASSPORT FACEBOOK LOGIN */
+/* PASSPORT FACEBOOK LOGIN 
 passport.use(
   new FacebookStrategy(
     {
@@ -51,3 +51,4 @@ passport.use(
 );
 
 module.exports = passport;
+*/

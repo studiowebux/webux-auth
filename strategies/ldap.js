@@ -1,5 +1,5 @@
 // TODO - EVERYTHING !
-
+/*
 const LdapStrategy = require("passport-ldapauth").Strategy;
 
 // LDAP config
@@ -31,3 +31,4 @@ passport.use(
 );
 
 module.export = passport;
+*/

@@ -1,91 +1,39 @@
 //TODO ADD HEADER
 
-const { initPassport } = require("../index");
-const { initLocalStrategy } = require("../strategies/local");
-const { initJWTStrategy } = require("../strategies/jwt");
-const { isAuthenticated } = require("../lib/authenticated");
+// EXAMPLE using Local sign in/up with JWT
 
-const deserializeFn = user => {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log(user);
-      console.log(
-        "Based on that ID do an API call to retrieve all the user information..."
-      );
-      return resolve({ _id: 1, fullname: "Bob", city: "Montreal" });
-    } catch (e) {
-      throw e;
-    }
-  });
-};
+const {
+  passport,
+  initJWTStrategy,
+  initLocalStrategy,
+  isAuthenticated,
+  retrievePassword,
+  lostPassword,
+  RefreshAccessToken,
+  RevokeAccessToken,
+  RevokeRefreshToken,
+  activateAccount,
+  lostActivationCode
+} = require("../index");
+const options = require("./config/auth");
+const {
+  loginFn,
+  registerFn,
+  deserializeFn,
+  lostPasswordFn,
+  retrievePasswordFn,
+  accountActivationFn,
+  lostActivationFn
+} = require("./helpers/index");
 
-const serializeUser = ["_id", "fullname"];
-
-const passport = initPassport(deserializeFn, serializeUser);
-
-const loginFn = (email, password, req) => {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log(
-        "If you need the req paramater, otherwise you can remove it..."
-      );
-      if (email && password) {
-        console.log("Credentials present !");
-        return resolve({ id: 2, fullname: "Bobby", city: "Quebec" });
-      }
-    } catch (e) {
-      throw e;
-    }
-  });
-};
-
-const registerFn = (email, password, req) => {
-  return new Promise((resolve, reject) => {
-    try {
-      console.log(
-        "If you need the req paramater, otherwise you can remove it..."
-      );
-      if (email && password) {
-        console.log("Credentials present !");
-        return resolve({
-          id: 3,
-          email: email,
-          city: req.body.city,
-          fullname: req.body.fullname,
-          password: password
-        });
-      }
-    } catch (e) {
-      throw e;
-    }
-  });
-};
-
-const options = {
-  local: {
-    username: "email",
-    password: "password",
-    passwordStrategy: {
-      enabled: false,
-      regex: "",
-      message: "The password strategy is enabled and you must be compliant."
-    },
-    autoLogonOnRegister: true,
-    autoActivate: false
-  },
-  jwt: {
-    accessSecret: process.env.JWT_ACCESS_SECRET || "SHUUUT!",
-    refreshSecret: process.env.JWT_REFRESH_SECRET || "SHUUUUT!",
-    accessLife: 900,
-    refreshLife: 86400,
-    scheme: "Bearer",
-    id: "id"
-  }
-};
-
+// Local strategy
 initLocalStrategy(options, passport, loginFn, registerFn);
-initJWTStrategy(options, passport);
 
+// JWT strategy
+initJWTStrategy(options, passport, deserializeFn); // with the getter function
+//initJWTStrategy(options, passport); // without the getter function
+
+const isAuth = isAuthenticated(options.jwt, passport);
 /* ---------------- */
 // EXPRESS APPLICATION
 /* ---------------- */
@@ -175,8 +123,111 @@ app.get("/register", (req, res, next) => {
   )(req, res, next);
 });
 
-app.get("/protected", isAuthenticated(passport), (req, res, next) => {
-  return res.status(200).json({ msg: "You are connected !" });
+app.get("/protected", isAuth, (req, res, next) => {
+  return res.status(200).json({ msg: "You are connected !", user: req.user });
+});
+
+app.get("/lost-password", async (req, res, next) => {
+  const info = await lostPassword(req.body.email, lostPasswordFn);
+  if (!info) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    msg:
+      "Request to retrieve password, you can specify which way is better to send the information generated in the lostPasswordFn",
+    info
+  });
+});
+
+app.get("/retrieve-password", async (req, res, next) => {
+  const info = await retrievePassword(
+    req.body.email,
+    req.body.code,
+    req.body.password,
+    retrievePasswordFn
+  );
+  if (!info) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    info
+  });
+});
+
+app.get("/lost-activation", async (req, res, next) => {
+  const info = await lostActivationCode(req.body.email, lostActivationFn);
+  if (!info) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    msg:
+      "Request to retrieve activation code, you can specify which way is better to send the information generated in the lostActivationFn",
+    info
+  });
+});
+
+app.get("/activate-account", async (req, res, next) => {
+  const info = await activateAccount(
+    req.body.email,
+    req.body.code,
+    accountActivationFn
+  );
+  if (!info) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    info
+  });
+});
+
+app.get("/revoke-refresh", isAuth, async (req, res, next) => {
+  const info = await RevokeRefreshToken(req.body.refreshToken);
+  if (!info) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    msg: "Refresh Token revoked"
+  });
+});
+
+app.get("/revoke-access", isAuth, async (req, res, next) => {
+  const info = await RevokeAccessToken(req.body.accessToken);
+  if (!info) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    msg: "Access Token revoked"
+  });
+});
+
+app.get("/logout", isAuth, async (req, res, next) => {
+  const refreshToken = await RevokeRefreshToken(req.body.accessToken);
+  if (!refreshToken) {
+    return res.status(422).json({ msg: "Refresh token not removed" });
+  }
+
+  const accessRemoved = await RevokeAccessToken(req.body.accessToken);
+  if (!accessRemoved) {
+    return res.status(422).json({ msg: "Access token not removed" });
+  }
+  return res.status(200).json({
+    msg: "Successfully logged out"
+  });
+});
+
+app.get("/refresh", async (req, res, next) => {
+  const newAccess = await RefreshAccessToken(
+    options,
+    req.body.refreshToken,
+    req.body.userID
+  );
+  if (!newAccess) {
+    return res.status(422).json({ msg: "No info" });
+  }
+  return res.status(200).json({
+    msg: "Access Token refreshed",
+    token: newAccess
+  });
 });
 
 app.listen(1337, () => {

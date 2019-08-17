@@ -1,4 +1,7 @@
 // TODO : add header
+
+"use strict";
+
 const passportJWT = require("passport-jwt");
 const JWTStrategy = passportJWT.Strategy;
 const ExtractJWT = passportJWT.ExtractJwt;
@@ -13,10 +16,16 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
         secretOrKey: options.jwt.accessSecret
       },
       async (jwtPayload, cb) => {
-        if (getterFn && typeof getterFn === "Function") {
-          //const payload = await getterFn()
+        if (getterFn && typeof getterFn === "function") {
+          const payload = await getterFn(jwtPayload).catch(e => {
+            return cb(e);
+          });
+
+          if (!payload) {
+            return cb("User Information Not Found");
+          }
+          return cb(null, payload);
         } else {
-          log.info(jwtPayload);
           return cb(null, jwtPayload);
         }
       }
