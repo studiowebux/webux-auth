@@ -1,4 +1,10 @@
-// TODO ADD HEADER
+/**
+ * File: local.js
+ * Author: Tommy Gingras
+ * Date: 2019-08-18
+ * License: All rights reserved Studio Webux S.E.N.C 2015-Present
+ */
+
 "use strict";
 
 const LocalStrategy = require("passport-local").Strategy;
@@ -9,8 +15,8 @@ const { GenerateJWT } = require("../lib/jwt");
  * It initializes the local sign in and sign up functions
  * @param {Object} options The local configuration (Username and password field names)
  * @param {Object} passport The Passport Object
- * @param {Function} loginFn The Login Function (username, password, req)=>{}
- * @param {Function} registerFn The Register Function (username, password, req)=>{}
+ * @param {Function} loginFn The Login Function (username, password, req)=>{return Promise()}
+ * @param {Function} registerFn The Register Function (username, password, req)=>{return Promise()}
  * @param {Object} log The custom logging function
  */
 const initLocalStrategy = (
@@ -44,6 +50,12 @@ const initLocalStrategy = (
     return reject(new Error("The log parameter must be an object"));
   }
 
+  console.log(
+    "\x1b[33m",
+    "Webux-auth - Initializing the local Sign In and Sign Up Strategy",
+    "\x1b[0m"
+  );
+
   /* PASSPORT LOCAL SIGNIN */
   passport.use(
     "local-signin",
@@ -55,18 +67,26 @@ const initLocalStrategy = (
       },
       async (req, username, password, done) => {
         try {
+          const ip =
+            req.headers["x-forwarded-for"] ||
+            req.connection.remoteAddress ||
+            req.socket.remoteAddress ||
+            (req.connection.socket
+              ? req.connection.socket.remoteAddress
+              : null);
+
           const connected = await loginFn(username, password, req).catch(e => {
             return done(e);
           });
 
           if (!connected) {
-            return done("Sign In Error");
+            return done("An error occurs while executing the login function");
           }
 
-          const tokens = GenerateJWT(options.jwt, connected);
-          connected.tokens = tokens;
+          connected.tokens = await GenerateJWT(options.jwt, connected, ip);
           return done(null, connected);
         } catch (e) {
+          log.error(e);
           return done(e);
         }
       }
@@ -99,17 +119,26 @@ const initLocalStrategy = (
           );
 
           if (!registered) {
-            return done("Sign Up Error");
+            return done(
+              "An error occurs while executing the register function"
+            );
           }
 
           if (options.local.autoLogonOnRegister) {
-            const tokens = GenerateJWT(options.jwt, registered);
-            registered.tokens = tokens;
+            var ip =
+              req.headers["x-forwarded-for"] ||
+              req.connection.remoteAddress ||
+              req.socket.remoteAddress ||
+              (req.connection.socket
+                ? req.connection.socket.remoteAddress
+                : null);
+            registered.tokens = await GenerateJWT(options.jwt, registered, ip);
             return done(null, registered);
           } else {
             return done(null, registered);
           }
         } catch (e) {
+          log.error(e);
           return done(e);
         }
       }

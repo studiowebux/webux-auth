@@ -10,21 +10,22 @@ const {
   retrievePassword,
   lostPassword,
   RefreshAccessToken,
-  RevokeAccessToken,
-  RevokeRefreshToken,
+  RevokeToken,
   activateAccount,
   lostActivationCode
 } = require("../index");
+const { getConnections } = require("./helpers/jwt");
 const options = require("./config/auth");
 const {
-  loginFn,
-  registerFn,
-  deserializeFn,
-  lostPasswordFn,
+  lostActivationFn,
+  accountActivationFn
+} = require("./helpers/accountActivation");
+
+const {
   retrievePasswordFn,
-  accountActivationFn,
-  lostActivationFn
-} = require("./helpers/index");
+  lostPasswordFn
+} = require("./helpers/accountPassword");
+const { loginFn, registerFn, deserializeFn } = require("./helpers/local");
 
 // Local strategy
 initLocalStrategy(options, passport, loginFn, registerFn);
@@ -41,6 +42,25 @@ const isAuth = isAuthenticated(options.jwt, passport);
 const express = require("express");
 const app = express();
 const bodyParser = require("body-parser");
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+
+var whitelist = ["http://127.0.0.1:8080", "http://localhost:8080"];
+var corsOptions = {
+  origin: function(origin, callback) {
+    if (whitelist.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      console.log("Not allowed by cors");
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+};
+
+app.use(cors(corsOptions));
+
+app.use(cookieParser());
 
 app.use(
   bodyParser.json({
@@ -55,7 +75,8 @@ app.use(
   })
 );
 
-app.get("/login", (req, res, next) => {
+app.post("/signin", (req, res, next) => {
+  console.log("Try to sign in");
   passport.authenticate(
     "local-signin",
     {
@@ -70,7 +91,7 @@ app.get("/login", (req, res, next) => {
             session: false
           });
 
-          return res.status(200).json({ connected: user });
+          return res.status(200).json(user);
         } else {
           return res.status(400).json({ msg: "Invalid Login", error: err });
         }
@@ -81,7 +102,8 @@ app.get("/login", (req, res, next) => {
   )(req, res, next);
 });
 
-app.get("/register", (req, res, next) => {
+app.post("/signup", (req, res, next) => {
+  console.log("Try to sign up");
   passport.authenticate(
     "local-signup",
     {
@@ -107,7 +129,7 @@ app.get("/register", (req, res, next) => {
             req.login(user, {
               session: false
             });
-            return res.status(200).json({ connected: user });
+            return res.status(200).json(user);
           } else {
             return res
               .status(200)
@@ -127,8 +149,34 @@ app.get("/protected", isAuth, (req, res, next) => {
   return res.status(200).json({ msg: "You are connected !", user: req.user });
 });
 
-app.get("/lost-password", async (req, res, next) => {
-  const info = await lostPassword(req.body.email, lostPasswordFn);
+app.get("/my-connection", isAuth, async (req, res, next) => {
+  console.log("Authorized !");
+  console.log("Try to get the connections");
+  try {
+    const connections = await getConnections(req.user.id).catch(e => {
+      console.log("or here ??");
+      throw e;
+    });
+
+    console.log(connections);
+
+    if (!connections) {
+      console.log("You must have at least one connection ... ");
+      return res.status(200).json({});
+    }
+    console.log(connections);
+    return res.status(200).json({ connections });
+  } catch (e) {
+    console.error(e);
+    console.log("here !");
+    return res.status(422).json({ msg: "an error occur.." });
+  }
+});
+
+app.post("/lost-password", async (req, res, next) => {
+  const info = await lostPassword(req.body.email, lostPasswordFn).catch(e => {
+    return res.status(400).json({ msg: "Invalid Request" });
+  });
   if (!info) {
     return res.status(422).json({ msg: "No info" });
   }
@@ -139,13 +187,15 @@ app.get("/lost-password", async (req, res, next) => {
   });
 });
 
-app.get("/retrieve-password", async (req, res, next) => {
+app.post("/retrieve-password", async (req, res, next) => {
   const info = await retrievePassword(
     req.body.email,
     req.body.code,
     req.body.password,
     retrievePasswordFn
-  );
+  ).catch(e => {
+    return res.status(400).json({ msg: "Invalid Request" });
+  });
   if (!info) {
     return res.status(422).json({ msg: "No info" });
   }
@@ -154,8 +204,12 @@ app.get("/retrieve-password", async (req, res, next) => {
   });
 });
 
-app.get("/lost-activation", async (req, res, next) => {
-  const info = await lostActivationCode(req.body.email, lostActivationFn);
+app.post("/lost-activation", async (req, res, next) => {
+  const info = await lostActivationCode(req.body.email, lostActivationFn).catch(
+    e => {
+      return res.status(400).json({ msg: "Invalid Request" });
+    }
+  );
   if (!info) {
     return res.status(422).json({ msg: "No info" });
   }
@@ -166,12 +220,14 @@ app.get("/lost-activation", async (req, res, next) => {
   });
 });
 
-app.get("/activate-account", async (req, res, next) => {
+app.post("/activate-account", async (req, res, next) => {
   const info = await activateAccount(
     req.body.email,
     req.body.code,
     accountActivationFn
-  );
+  ).catch(e => {
+    return res.status(400).json({ msg: "Invalid Request" });
+  });
   if (!info) {
     return res.status(422).json({ msg: "No info" });
   }
@@ -180,8 +236,12 @@ app.get("/activate-account", async (req, res, next) => {
   });
 });
 
-app.get("/revoke-refresh", isAuth, async (req, res, next) => {
-  const info = await RevokeRefreshToken(req.body.refreshToken);
+app.post("/revoke-refresh", isAuth, async (req, res, next) => {
+  const info = await RevokeToken(req.body.refreshToken, req.user.id).catch(
+    e => {
+      return res.status(400).json({ msg: "Invalid Request" });
+    }
+  );
   if (!info) {
     return res.status(422).json({ msg: "No info" });
   }
@@ -190,8 +250,10 @@ app.get("/revoke-refresh", isAuth, async (req, res, next) => {
   });
 });
 
-app.get("/revoke-access", isAuth, async (req, res, next) => {
-  const info = await RevokeAccessToken(req.body.accessToken);
+app.post("/revoke-access", isAuth, async (req, res, next) => {
+  const info = await RevokeToken(req.body.accessToken, req.user.id).catch(e => {
+    return res.status(400).json({ msg: "Invalid Request" });
+  });
   if (!info) {
     return res.status(422).json({ msg: "No info" });
   }
@@ -200,13 +262,21 @@ app.get("/revoke-access", isAuth, async (req, res, next) => {
   });
 });
 
-app.get("/logout", isAuth, async (req, res, next) => {
-  const refreshToken = await RevokeRefreshToken(req.body.accessToken);
+app.post("/logout", isAuth, async (req, res, next) => {
+  const refreshToken = await RevokeRefreshToken(req.body.accessToken).catch(
+    e => {
+      return res.status(400).json({ msg: "Invalid Request" });
+    }
+  );
   if (!refreshToken) {
     return res.status(422).json({ msg: "Refresh token not removed" });
   }
 
-  const accessRemoved = await RevokeAccessToken(req.body.accessToken);
+  const accessRemoved = await RevokeAccessToken(req.body.accessToken).catch(
+    e => {
+      return res.status(400).json({ msg: "Invalid Request" });
+    }
+  );
   if (!accessRemoved) {
     return res.status(422).json({ msg: "Access token not removed" });
   }
@@ -215,18 +285,33 @@ app.get("/logout", isAuth, async (req, res, next) => {
   });
 });
 
-app.get("/refresh", async (req, res, next) => {
-  const newAccess = await RefreshAccessToken(
-    options,
-    req.body.refreshToken,
-    req.body.userID
-  );
-  if (!newAccess) {
-    return res.status(422).json({ msg: "No info" });
+app.post("/refresh", async (req, res, next) => {
+  try {
+    console.log(req.body.refreshToken);
+    console.log(req.body.userID);
+    console.log(req.body);
+    const newAccess = await RefreshAccessToken(
+      options.jwt,
+      req.body.refreshToken,
+      req.body.userID
+    );
+
+    if (!newAccess) {
+      return res.status(422).json({ msg: "No info" });
+    }
+    //console.log(newAccess)
+    return res.status(200).json({
+      msg: "Access Token refreshed",
+      token: newAccess
+    });
+  } catch (e) {
+    return res.status(400).json({ msg: "Invalid Request", debug: e });
   }
-  return res.status(200).json({
-    msg: "Access Token refreshed",
-    token: newAccess
+});
+
+app.get("*", (req, res, next) => {
+  return res.status(404).json({
+    msg: "Route not Found"
   });
 });
 
