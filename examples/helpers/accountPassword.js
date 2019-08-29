@@ -3,17 +3,20 @@
 const lostPasswordFn = (email, code) => {
   return new Promise((resolve, reject) => {
     try {
+      console.log("*-* TEMPLATE *-*");
       console.log(
-        "Using the email and the code, I have to do something in the database to keep that information"
+        "1. You should use a database to store the code generated here"
       );
-      console.log("But for now I will only send ok !");
+      console.log(
+        "2. You have to send the code using your way to the end-user"
+      );
+      console.log("Test Purpose");
+      console.log("------------");
       console.log(email);
       console.log(code);
 
-      console.log(
-        "You may use an email, sms to send the link to retrieve the password for the account with the code"
-      );
-      return resolve(true); // this function must return something !
+      console.log("lostPasswordFn - Must return something");
+      return resolve(true);
     } catch (e) {
       throw e;
     }
@@ -23,21 +26,30 @@ const lostPasswordFn = (email, code) => {
 const retrievePasswordFn = (email, code, password) => {
   return new Promise((resolve, reject) => {
     try {
+      console.log("*-* TEMPLATE *-*");
       console.log(
-        "Using the email, the code and the new password, I have to do something in the database to keep that information and update everything"
+        "1. You should use a database to store the code generated earlier"
       );
-
-      console.log("1. check if the code is still valid");
       console.log(
-        "1.1 check if the code exist and is associated with the email"
+        "2. You have to check if the code and the email match, otherwise return an error"
       );
-      console.log("2. encrypt the password");
-      console.log("3. Save the information and reset the lost password fields");
-      console.log("But for now I will only send ok !");
+      console.log(
+        "3. if the code and the email match, you have to save the password passed in the request"
+      );
+      console.log(
+        "4. then if you configured a sort of timer to change the password, reset it"
+      );
+      console.log(
+        "-- DO NOT LOG THE PASSWORD IN CLEAR TEXT IN ANY LOGGER / CONSOLE --"
+      );
+      console.log("Test Purpose");
+      console.log("------------");
       console.log(email);
       console.log(code);
       console.log(password);
-      return resolve(true); // this function must return something !
+
+      console.log("retrievePasswordFn - Must return something");
+      return resolve(true);
     } catch (e) {
       throw e;
     }

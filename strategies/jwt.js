@@ -45,6 +45,7 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
           });
 
           if (!payload) {
+            log.error("User Information Not Found.")
             return cb("User Information Not Found");
           }
           return cb(null, payload);

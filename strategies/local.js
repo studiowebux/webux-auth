@@ -76,10 +76,12 @@ const initLocalStrategy = (
               : null);
 
           const connected = await loginFn(username, password, req).catch(e => {
+            log.error(e);
             return done(e);
           });
 
           if (!connected) {
+            log.error("An error occurs while executing the login function");
             return done("An error occurs while executing the login function");
           }
 
@@ -109,16 +111,19 @@ const initLocalStrategy = (
             options.local.passwordStrategy.enabled &&
             !checkPassword(options.local.passwordStrategy.regex, password)
           ) {
+            log.error(options.local.passwordStrategy.message);
             return done(options.local.passwordStrategy.message);
           }
 
           const registered = await registerFn(username, password, req).catch(
             e => {
+              log.error(e);
               return done(e);
             }
           );
 
           if (!registered) {
+            log.error("An error occurs while executing the register function");
             return done(
               "An error occurs while executing the register function"
             );

@@ -19,7 +19,11 @@ module.exports = {
     id: "id",
     serializeUser: ["id", "fullname"]
   },
-  redis:{
+  redis: {
     mock: true,
+    host: "127.0.0.1",
+    port: "6379",
+    //password: "", commented in case that you did not use a password
+    no_ready_check: true
   }
 };

@@ -12,29 +12,41 @@ const {
   RefreshAccessToken,
   RevokeToken,
   activateAccount,
-  lostActivationCode
-} = require("../index");
-const { getConnections } = require("./helpers/jwt");
-const options = require("./config/auth");
+  lostActivationCode,
+  initializeRedis
+} = require("../index"); // webux-auth
+
+const { getConnections, initializeLocalRedis } = require("./helpers/jwt"); // utilities to get the current connections
+
+const options = require("./config/auth"); // All the options related to the authentication module
+
 const {
   lostActivationFn,
   accountActivationFn
-} = require("./helpers/accountActivation");
+} = require("./helpers/accountActivation"); // User functions for account activation (if needed)
 
 const {
   retrievePasswordFn,
   lostPasswordFn
-} = require("./helpers/accountPassword");
-const { loginFn, registerFn, deserializeFn } = require("./helpers/local");
+} = require("./helpers/accountPassword"); // User functions for password recovery (if needed)
+
+const { loginFn, registerFn, deserializeFn } = require("./helpers/local"); // User functions for local authentication (if needed)
+
+const { errorHandler } = require("./helpers/errorHandler"); // User function custom errorHandler
+const { /*errorHandler,*/ globalErrorHandler } = require("webux-errorhandler"); // TO handle the errors globally
 
 // Local strategy
 initLocalStrategy(options, passport, loginFn, registerFn);
 
 // JWT strategy
-initJWTStrategy(options, passport, deserializeFn); // with the getter function
-//initJWTStrategy(options, passport); // without the getter function
+initJWTStrategy(options, passport, deserializeFn); // with the getter function, if you have stored the minimum in the JWT token
+//initJWTStrategy(options, passport); // without the getter function, if you have stored everything you need in the JWT token
 
-const isAuth = isAuthenticated(options.jwt, passport);
+initializeRedis(options.redis); // this is for the webux-auth module
+initializeLocalRedis(options.redis); // if needed to retrieve the connections (I recommend to use a database for that)
+
+const isAuth = isAuthenticated(options.jwt, passport, errorHandler); // The middleware function to check if the user is authenticated
+
 /* ---------------- */
 // EXPRESS APPLICATION
 /* ---------------- */
@@ -45,6 +57,18 @@ const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
+// required for the globalErrorHandler
+// You can write your own method to handle errors,
+// In that case, you can remove that function
+express.response["custom"] = function(code, obj) {
+  this.status(code);
+  this.json({
+    message: obj.message,
+    success: obj.success
+  });
+};
+
+// Configure the CORS
 var whitelist = ["http://127.0.0.1:8080", "http://localhost:8080"];
 var corsOptions = {
   origin: function(origin, callback) {
@@ -75,8 +99,11 @@ app.use(
   })
 );
 
+/* ---------------- */
+// EXPRESS ROUTING
+/* ---------------- */
+
 app.post("/signin", (req, res, next) => {
-  console.log("Try to sign in");
   passport.authenticate(
     "local-signin",
     {
@@ -85,7 +112,7 @@ app.post("/signin", (req, res, next) => {
     (err, user) => {
       try {
         if (err) {
-          throw err;
+          return next(errorHandler(400, "Incorrect Credentials", {}, error));
         } else if (!err && user) {
           req.login(user, {
             session: false
@@ -93,17 +120,23 @@ app.post("/signin", (req, res, next) => {
 
           return res.status(200).json(user);
         } else {
-          return res.status(400).json({ msg: "Invalid Login", error: err });
+          return next(
+            errorHandler(
+              400,
+              "Incorrect Credentials",
+              {},
+              "No User have been found"
+            )
+          );
         }
       } catch (e) {
-        return res.status(400).json({ msg: "Invalid Login", error: e });
+        return next(errorHandler(400, "Incorrect Credentials", {}, e));
       }
     }
   )(req, res, next);
 });
 
 app.post("/signup", (req, res, next) => {
-  console.log("Try to sign up");
   passport.authenticate(
     "local-signup",
     {
@@ -112,12 +145,13 @@ app.post("/signup", (req, res, next) => {
     (err, user) => {
       try {
         if (err) {
-          throw err;
+          return next(errorHandler(400, "Incorrect Credentials", {}, err));
         } else if (!err && user) {
           // If the auto activate is enabled.
           if (options.local.autoActivate) {
+            console.log("The auto activation is enabled");
             console.log(
-              "The auto activation is enabled, you have to code the update to activate the user account without sending a mail"
+              "you have to code the update to activate the user account without sending a mail"
             );
           } else {
             console.log(
@@ -136,10 +170,17 @@ app.post("/signup", (req, res, next) => {
               .json({ msg: "Account successfully created." });
           }
         } else {
-          return res.status(400).json({ msg: "Invalid Login", error: err });
+          return next(
+            errorHandler(
+              400,
+              "Incorrect Credentials",
+              {},
+              "No User have been found"
+            )
+          );
         }
       } catch (e) {
-        res.status(400).json({ msg: "Invalid Login", error: e });
+        return next(errorHandler(400, "Incorrect Credentials", {}, e));
       }
     }
   )(req, res, next);
@@ -150,146 +191,197 @@ app.get("/protected", isAuth, (req, res, next) => {
 });
 
 app.get("/my-connection", isAuth, async (req, res, next) => {
-  console.log("Authorized !");
-  console.log("Try to get the connections");
   try {
     const connections = await getConnections(req.user.id).catch(e => {
-      console.log("or here ??");
       throw e;
     });
 
-    console.log(connections);
-
     if (!connections) {
       console.log("You must have at least one connection ... ");
-      return res.status(200).json({});
+      throw new Error("No connection is available");
     }
-    console.log(connections);
     return res.status(200).json({ connections });
   } catch (e) {
-    console.error(e);
-    console.log("here !");
-    return res.status(422).json({ msg: "an error occur.." });
+    return next(
+      errorHandler(
+        400,
+        "An error occur while retrieving the connections",
+        {},
+        e
+      )
+    );
   }
 });
 
 app.post("/lost-password", async (req, res, next) => {
-  const info = await lostPassword(req.body.email, lostPasswordFn).catch(e => {
-    return res.status(400).json({ msg: "Invalid Request" });
-  });
-  if (!info) {
-    return res.status(422).json({ msg: "No info" });
+  try {
+    const info = await lostPassword(req.body.email, lostPasswordFn).catch(e => {
+      throw e;
+    });
+    if (!info) {
+      throw new Error("An error occurs while generating the instructions");
+    }
+    return res.status(200).json({
+      msg:
+        "Request to retrieve password, you can specify which way is better to send the information generated in the lostPasswordFn",
+      info
+    });
+  } catch (e) {
+    return next(
+      errorHandler(
+        400,
+        "An error occur while trying to send the instructions",
+        {},
+        e
+      )
+    );
   }
-  return res.status(200).json({
-    msg:
-      "Request to retrieve password, you can specify which way is better to send the information generated in the lostPasswordFn",
-    info
-  });
 });
 
 app.post("/retrieve-password", async (req, res, next) => {
-  const info = await retrievePassword(
-    req.body.email,
-    req.body.code,
-    req.body.password,
-    retrievePasswordFn
-  ).catch(e => {
-    return res.status(400).json({ msg: "Invalid Request" });
-  });
-  if (!info) {
-    return res.status(422).json({ msg: "No info" });
+  try {
+    const info = await retrievePassword(
+      req.body.email,
+      req.body.code,
+      req.body.password,
+      retrievePasswordFn
+    ).catch(e => {
+      throw e;
+    });
+    if (!info) {
+      throw new Error("An error occurs while reseting the password");
+    }
+    return res.status(200).json({
+      info
+    });
+  } catch (e) {
+    return next(
+      errorHandler(400, "An error occur while reseting the password", {}, e)
+    );
   }
-  return res.status(200).json({
-    info
-  });
 });
 
 app.post("/lost-activation", async (req, res, next) => {
-  const info = await lostActivationCode(req.body.email, lostActivationFn).catch(
-    e => {
-      return res.status(400).json({ msg: "Invalid Request" });
+  try {
+    const info = await lostActivationCode(
+      req.body.email,
+      lostActivationFn
+    ).catch(e => {
+      throw e;
+    });
+    if (!info) {
+      throw new Error(
+        "An error occurs while generating the lost activation code"
+      );
     }
-  );
-  if (!info) {
-    return res.status(422).json({ msg: "No info" });
+    return res.status(200).json({
+      msg:
+        "Request to retrieve activation code, you can specify which way is better to send the information generated in the lostActivationFn",
+      info
+    });
+  } catch (e) {
+    return next(
+      errorHandler(400, "An error occurs to send instructions", {}, e)
+    );
   }
-  return res.status(200).json({
-    msg:
-      "Request to retrieve activation code, you can specify which way is better to send the information generated in the lostActivationFn",
-    info
-  });
 });
 
 app.post("/activate-account", async (req, res, next) => {
-  const info = await activateAccount(
-    req.body.email,
-    req.body.code,
-    accountActivationFn
-  ).catch(e => {
-    return res.status(400).json({ msg: "Invalid Request" });
-  });
-  if (!info) {
-    return res.status(422).json({ msg: "No info" });
+  try {
+    const info = await activateAccount(
+      req.body.email,
+      req.body.code,
+      accountActivationFn
+    ).catch(e => {
+      throw e;
+    });
+    if (!info) {
+      throw new Error("An error occurs while activating the account");
+    }
+    return res.status(200).json({
+      info
+    });
+  } catch (e) {
+    return next(
+      errorHandler(400, "An error occur while activating the account", {}, e)
+    );
   }
-  return res.status(200).json({
-    info
-  });
 });
 
 app.post("/revoke-refresh", isAuth, async (req, res, next) => {
-  const info = await RevokeToken(req.body.refreshToken, req.user.id).catch(
-    e => {
-      return res.status(400).json({ msg: "Invalid Request" });
+  try {
+    const info = await RevokeToken(req.body.refreshToken, req.user.id).catch(
+      e => {
+        throw e;
+      }
+    );
+    if (!info) {
+      throw new Error("An error occurs while revoking the refresh token");
     }
-  );
-  if (!info) {
-    return res.status(422).json({ msg: "No info" });
+    return res.status(200).json({
+      msg: "Refresh Token revoked"
+    });
+  } catch (e) {
+    return next(
+      errorHandler(
+        400,
+        "An error occur while revoking the refresh token",
+        {},
+        e
+      )
+    );
   }
-  return res.status(200).json({
-    msg: "Refresh Token revoked"
-  });
 });
 
 app.post("/revoke-access", isAuth, async (req, res, next) => {
-  const info = await RevokeToken(req.body.accessToken, req.user.id).catch(e => {
-    return res.status(400).json({ msg: "Invalid Request" });
-  });
-  if (!info) {
-    return res.status(422).json({ msg: "No info" });
+  try {
+    const info = await RevokeToken(req.body.accessToken, req.user.id).catch(
+      e => {
+        throw e;
+      }
+    );
+    if (!info) {
+      throw new Error("An error occurs while revoking the access token");
+    }
+    return res.status(200).json({
+      msg: "Access Token revoked"
+    });
+  } catch (e) {
+    return next(
+      errorHandler(400, "An error occur while revoking the access token", {}, e)
+    );
   }
-  return res.status(200).json({
-    msg: "Access Token revoked"
-  });
 });
 
 app.post("/logout", isAuth, async (req, res, next) => {
-  const refreshToken = await RevokeRefreshToken(req.body.accessToken).catch(
-    e => {
-      return res.status(400).json({ msg: "Invalid Request" });
+  try {
+    const refreshToken = await RevokeRefreshToken(req.body.accessToken).catch(
+      e => {
+        throw e;
+      }
+    );
+    if (!refreshToken) {
+      throw new Error("Refresh token not removed");
     }
-  );
-  if (!refreshToken) {
-    return res.status(422).json({ msg: "Refresh token not removed" });
-  }
 
-  const accessRemoved = await RevokeAccessToken(req.body.accessToken).catch(
-    e => {
-      return res.status(400).json({ msg: "Invalid Request" });
+    const accessRemoved = await RevokeAccessToken(req.body.accessToken).catch(
+      e => {
+        throw e;
+      }
+    );
+    if (!accessRemoved) {
+      throw new Error("Access token not removed");
     }
-  );
-  if (!accessRemoved) {
-    return res.status(422).json({ msg: "Access token not removed" });
+    return res.status(200).json({
+      msg: "Successfully logged out"
+    });
+  } catch (e) {
+    return next(errorHandler(400, "An error occur while logging out", {}, e));
   }
-  return res.status(200).json({
-    msg: "Successfully logged out"
-  });
 });
 
 app.post("/refresh", async (req, res, next) => {
   try {
-    console.log(req.body.refreshToken);
-    console.log(req.body.userID);
-    console.log(req.body);
     const newAccess = await RefreshAccessToken(
       options.jwt,
       req.body.refreshToken,
@@ -297,15 +389,16 @@ app.post("/refresh", async (req, res, next) => {
     );
 
     if (!newAccess) {
-      return res.status(422).json({ msg: "No info" });
+      throw new Error("No access token provided");
     }
-    //console.log(newAccess)
     return res.status(200).json({
       msg: "Access Token refreshed",
       token: newAccess
     });
   } catch (e) {
-    return res.status(400).json({ msg: "Invalid Request", debug: e });
+    return next(
+      errorHandler(403, "An error occur while refreshing the token", {}, e)
+    );
   }
 });
 
@@ -314,6 +407,8 @@ app.get("*", (req, res, next) => {
     msg: "Route not Found"
   });
 });
+
+globalErrorHandler(app);
 
 app.listen(1337, () => {
   console.log("Server is listening on port 1337 ...");

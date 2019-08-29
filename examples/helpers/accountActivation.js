@@ -3,16 +3,20 @@
 const lostActivationFn = (email, code) => {
   return new Promise((resolve, reject) => {
     try {
+      console.log("*-* TEMPLATE *-*");
       console.log(
-        "Using the email and the code, I have to do something in the database to keep that information"
+        "1. You should use a database to store the code generated here"
       );
-      console.log("But for now I will only send ok !");
+      console.log(
+        "2. You have to send the code using your way to the end-user"
+      );
+      console.log("Test Purpose");
+      console.log("------------");
       console.log(email);
       console.log(code);
-      console.log(
-        "You may use an email, sms to send the link to activate the account with new code"
-      );
-      return resolve(true); // this function must return something !
+
+      console.log("lostActivationFn - Must return something");
+      return resolve(true);
     } catch (e) {
       throw e;
     }
@@ -22,21 +26,24 @@ const lostActivationFn = (email, code) => {
 const accountActivationFn = (email, code) => {
   return new Promise((resolve, reject) => {
     try {
+      console.log("*-* TEMPLATE *-*");
       console.log(
-        "Using the email and the code, I have to do something in the database to keep that information and update everything"
-      );
-
-      console.log(
-        "1. check if the code is valid and the account is not already activated"
+        "1. You should use a database to store the code generated earlier"
       );
       console.log(
-        "1.1 check if the code exist and is associated with the email"
+        "2. Validate the code sent to the user using its email with the code"
       );
-      console.log("2. set the account activate in the database");
-      console.log("But for now I will only send ok !");
+      console.log(
+        "3. If the email and the code match - Activate the acount, otherwise return an error"
+      );
+      console.log("Test Purpose");
+      console.log("------------");
       console.log(email);
       console.log(code);
-      return resolve(true); // this function must return something !
+
+      console.log("accountActivationFn - Must return something");
+
+      return resolve(true);
     } catch (e) {
       throw e;
     }

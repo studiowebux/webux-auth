@@ -15,9 +15,11 @@ const { lostPassword, retrievePassword } = require("./lib/passwordActions");
 const { lostActivationCode, activateAccount } = require("./lib/accountActions");
 const {
   RevokeToken,
-  RefreshAccessToken
+  RefreshAccessToken,
+  initializeRedis
 } = require("./lib/jwt");
 
+// Exports all the modules
 module.exports = {
   isAuthenticated,
   initJWTStrategy,
@@ -28,5 +30,6 @@ module.exports = {
   lostActivationCode,
   activateAccount,
   RefreshAccessToken,
-  RevokeToken
+  RevokeToken,
+  initializeRedis
 };
