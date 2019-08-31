@@ -12,7 +12,7 @@ const { isAuthenticated } = require("./lib/authenticated");
 const { initJWTStrategy } = require("./strategies/jwt");
 const { initLocalStrategy } = require("./strategies/local");
 const { lostPassword, retrievePassword } = require("./lib/passwordActions");
-const { lostActivationCode, activateAccount } = require("./lib/accountActions");
+const { activationCode, activateAccount } = require("./lib/accountActions");
 const {
   RevokeToken,
   RefreshAccessToken,
@@ -27,7 +27,7 @@ module.exports = {
   passport,
   lostPassword,
   retrievePassword,
-  lostActivationCode,
+  activationCode,
   activateAccount,
   RefreshAccessToken,
   RevokeToken,
