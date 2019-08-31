@@ -355,7 +355,7 @@ app.post("/revoke-access", isAuth, async (req, res, next) => {
 
 app.post("/logout", isAuth, async (req, res, next) => {
   try {
-    const refreshToken = await RevokeRefreshToken(req.body.accessToken).catch(
+    const refreshToken = await RevokeRefreshToken(req.body.refreshToken).catch(
       e => {
         throw e;
       }
