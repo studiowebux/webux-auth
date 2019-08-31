@@ -77,7 +77,7 @@ const initLocalStrategy = (
 
           const connected = await loginFn(username, password, req).catch(e => {
             log.error(e);
-            return done(e);
+            throw e;
           });
 
           if (!connected) {
@@ -118,7 +118,7 @@ const initLocalStrategy = (
           const registered = await registerFn(username, password, req).catch(
             e => {
               log.error(e);
-              return done(e);
+              throw e;
             }
           );
 

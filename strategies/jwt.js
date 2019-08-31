@@ -41,11 +41,11 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
             "\x1b[0m"
           );
           const payload = await getterFn(jwtPayload).catch(e => {
-            return cb(e);
+            throw e;
           });
 
           if (!payload) {
-            log.error("User Information Not Found.")
+            log.error("User Information Not Found.");
             return cb("User Information Not Found");
           }
           return cb(null, payload);
