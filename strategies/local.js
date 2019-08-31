@@ -77,12 +77,17 @@ const initLocalStrategy = (
 
           loginFn(username, password, req)
             .then(async connected => {
-              connected.tokens = await GenerateJWT(options.jwt, connected, ip);
+              connected.tokens = await GenerateJWT(
+                options.jwt,
+                connected,
+                ip
+              ).catch(e => {
+                return done(e);
+              });
               return done(null, connected);
             })
             .catch(e => {
-              log.error(e);
-              throw e;
+              return done(e);
             });
         } catch (e) {
           log.error(e);
@@ -126,7 +131,9 @@ const initLocalStrategy = (
                   options.jwt,
                   registered,
                   ip
-                );
+                ).catch(e => {
+                  return done(e);
+                });
                 return done(null, registered);
               } else {
                 return done(null, registered);
@@ -134,7 +141,7 @@ const initLocalStrategy = (
             })
             .catch(e => {
               log.error(e);
-              throw e;
+              return done(e);
             });
         } catch (e) {
           log.error(e);
