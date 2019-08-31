@@ -65,7 +65,7 @@ const initLocalStrategy = (
         passwordField: options.local.password,
         passReqToCallback: true // allows us to pass back the entire request to the callback
       },
-      async (req, username, password, done) => {
+      (req, username, password, done) => {
         try {
           const ip =
             req.headers["x-forwarded-for"] ||
@@ -75,18 +75,15 @@ const initLocalStrategy = (
               ? req.connection.socket.remoteAddress
               : null);
 
-          const connected = await loginFn(username, password, req).catch(e => {
-            log.error(e);
-            throw e;
-          });
-
-          if (!connected) {
-            log.error("An error occurs while executing the login function");
-            return done("An error occurs while executing the login function");
-          }
-
-          connected.tokens = await GenerateJWT(options.jwt, connected, ip);
-          return done(null, connected);
+          loginFn(username, password, req)
+            .then(async connected => {
+              connected.tokens = await GenerateJWT(options.jwt, connected, ip);
+              return done(null, connected);
+            })
+            .catch(e => {
+              log.error(e);
+              throw e;
+            });
         } catch (e) {
           log.error(e);
           return done(e);
@@ -104,7 +101,7 @@ const initLocalStrategy = (
         passwordField: options.local.password,
         passReqToCallback: true // allows us to pass back the entire request to the callback
       },
-      async (req, username, password, done) => {
+      (req, username, password, done) => {
         try {
           // If the password strategy is enabled.
           if (
@@ -112,36 +109,33 @@ const initLocalStrategy = (
             !checkPassword(options.local.passwordStrategy.regex, password)
           ) {
             log.error(options.local.passwordStrategy.message);
-            return done(options.local.passwordStrategy.message);
+            throw options.local.passwordStrategy.message;
           }
 
-          const registered = await registerFn(username, password, req).catch(
-            e => {
+          registerFn(username, password, req)
+            .then(async registered => {
+              if (options.local.autoLogonOnRegister) {
+                var ip =
+                  req.headers["x-forwarded-for"] ||
+                  req.connection.remoteAddress ||
+                  req.socket.remoteAddress ||
+                  (req.connection.socket
+                    ? req.connection.socket.remoteAddress
+                    : null);
+                registered.tokens = await GenerateJWT(
+                  options.jwt,
+                  registered,
+                  ip
+                );
+                return done(null, registered);
+              } else {
+                return done(null, registered);
+              }
+            })
+            .catch(e => {
               log.error(e);
               throw e;
-            }
-          );
-
-          if (!registered) {
-            log.error("An error occurs while executing the register function");
-            return done(
-              "An error occurs while executing the register function"
-            );
-          }
-
-          if (options.local.autoLogonOnRegister) {
-            var ip =
-              req.headers["x-forwarded-for"] ||
-              req.connection.remoteAddress ||
-              req.socket.remoteAddress ||
-              (req.connection.socket
-                ? req.connection.socket.remoteAddress
-                : null);
-            registered.tokens = await GenerateJWT(options.jwt, registered, ip);
-            return done(null, registered);
-          } else {
-            return done(null, registered);
-          }
+            });
         } catch (e) {
           log.error(e);
           return done(e);
