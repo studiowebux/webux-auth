@@ -26,40 +26,46 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
     "Webux-auth - Initializing the JWT Strategy",
     "\x1b[0m"
   );
-  passport.use(
-    "jwt",
-    new JWTStrategy(
-      {
-        jwtFromRequest: ExtractJWT.fromAuthHeaderWithScheme(options.jwt.scheme),
-        secretOrKey: options.jwt.accessSecret
-      },
-      async (jwtPayload, cb) => {
-        if (getterFn && typeof getterFn === "function") {
-          console.log(
-            "\x1b[33m",
-            "Webux-auth - The JWT Strategy uses a custom getter function for the payload",
-            "\x1b[0m"
-          );
-          const payload = await getterFn(jwtPayload).catch(e => {
-            throw e;
-          });
+  try {
+    passport.use(
+      "jwt",
+      new JWTStrategy(
+        {
+          jwtFromRequest: ExtractJWT.fromAuthHeaderWithScheme(
+            options.jwt.scheme
+          ),
+          secretOrKey: options.jwt.accessSecret
+        },
+        async (jwtPayload, cb) => {
+          if (getterFn && typeof getterFn === "function") {
+            console.log(
+              "\x1b[33m",
+              "Webux-auth - The JWT Strategy uses a custom getter function for the payload",
+              "\x1b[0m"
+            );
+            const payload = await getterFn(jwtPayload).catch(e => {
+              throw e;
+            });
 
-          if (!payload) {
-            log.error("User Information Not Found.");
-            return cb("User Information Not Found");
+            if (!payload) {
+              return cb("User Information Not Found");
+            }
+            return cb(null, payload);
+          } else {
+            console.log(
+              "\x1b[33m",
+              "Webux-auth - The JWT Strategy uses the payload as is",
+              "\x1b[0m"
+            );
+            return cb(null, jwtPayload);
           }
-          return cb(null, payload);
-        } else {
-          console.log(
-            "\x1b[33m",
-            "Webux-auth - The JWT Strategy uses the payload as is",
-            "\x1b[0m"
-          );
-          return cb(null, jwtPayload);
         }
-      }
-    )
-  );
+      )
+    );
+  } catch (e) {
+    log.error(e);
+    return cb(e);
+  }
 };
 
 module.exports = { initJWTStrategy };

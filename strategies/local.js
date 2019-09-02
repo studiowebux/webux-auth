@@ -11,6 +11,15 @@ const LocalStrategy = require("passport-local").Strategy;
 const { checkPassword } = require("../lib/passwordStrategy");
 const { GenerateJWT } = require("../lib/jwt");
 
+function setIp(req) {
+  return (
+    req.headers["x-forwarded-for"] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    (req.connection.socket ? req.connection.socket.remoteAddress : null)
+  );
+}
+
 /**
  * It initializes the local sign in and sign up functions
  * @param {Object} options The local configuration (Username and password field names)
@@ -26,30 +35,6 @@ const initLocalStrategy = (
   registerFn,
   log = console
 ) => {
-  if (!options || typeof options !== "object") {
-    return reject(
-      new Error("The options parameter is required and must be an object")
-    );
-  }
-  if (!passport || typeof passport !== "object") {
-    return reject(
-      new Error("The passport parameter is required and must be an object")
-    );
-  }
-  if (!loginFn || typeof loginFn !== "function") {
-    return reject(
-      new Error("The loginFn parameter is required and must be a function")
-    );
-  }
-  if (!registerFn || typeof registerFn !== "function") {
-    return reject(
-      new Error("The registerFn parameter is required and must be a function")
-    );
-  }
-  if (log && typeof log !== "object") {
-    return reject(new Error("The log parameter must be an object"));
-  }
-
   console.log(
     "\x1b[33m",
     "Webux-auth - Initializing the local Sign In and Sign Up Strategy",
@@ -67,13 +52,7 @@ const initLocalStrategy = (
       },
       (req, username, password, done) => {
         try {
-          const ip =
-            req.headers["x-forwarded-for"] ||
-            req.connection.remoteAddress ||
-            req.socket.remoteAddress ||
-            (req.connection.socket
-              ? req.connection.socket.remoteAddress
-              : null);
+          const ip = setIp(req);
 
           loginFn(username, password, req)
             .then(async connected => {
@@ -113,20 +92,14 @@ const initLocalStrategy = (
             options.local.passwordStrategy.enabled &&
             !checkPassword(options.local.passwordStrategy.regex, password)
           ) {
-            log.error(options.local.passwordStrategy.message);
-            throw options.local.passwordStrategy.message;
+            throw new Error(options.local.passwordStrategy.message);
           }
 
           registerFn(username, password, req)
             .then(async registered => {
               if (options.local.autoLogonOnRegister) {
-                var ip =
-                  req.headers["x-forwarded-for"] ||
-                  req.connection.remoteAddress ||
-                  req.socket.remoteAddress ||
-                  (req.connection.socket
-                    ? req.connection.socket.remoteAddress
-                    : null);
+                var ip = setIp(req);
+
                 registered.tokens = await GenerateJWT(
                   options.jwt,
                   registered,
@@ -140,7 +113,6 @@ const initLocalStrategy = (
               }
             })
             .catch(e => {
-              log.error(e);
               return done(e);
             });
         } catch (e) {

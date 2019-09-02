@@ -19,7 +19,7 @@ const {
   initializeRedis
 } = require("./lib/jwt");
 
-// Exports all the modules
+// Export all modules
 module.exports = {
   isAuthenticated,
   initJWTStrategy,

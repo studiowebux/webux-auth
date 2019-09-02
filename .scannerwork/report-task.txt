@@ -1,0 +1,6 @@
+projectKey=Webux-auth
+serverUrl=http://sonarqube.webux.lab
+serverVersion=7.9.1.27448
+dashboardUrl=http://sonarqube.webux.lab/dashboard?id=Webux-auth
+ceTaskId=AWzvRkwEcyyBgSjzWkPR
+ceTaskUrl=http://sonarqube.webux.lab/api/ce/task?id=AWzvRkwEcyyBgSjzWkPR
