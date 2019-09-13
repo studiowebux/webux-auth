@@ -16,7 +16,8 @@ const { activationCode, activateAccount } = require("./lib/accountActions");
 const {
   RevokeToken,
   RefreshAccessToken,
-  initializeRedis
+  initializeRedis,
+  CheckToken
 } = require("./lib/jwt");
 
 // Export all modules
@@ -31,5 +32,6 @@ module.exports = {
   activateAccount,
   RefreshAccessToken,
   RevokeToken,
-  initializeRedis
+  initializeRedis,
+  CheckToken
 };
