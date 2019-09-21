@@ -21,7 +21,7 @@ const ExtractJWT = passportJWT.ExtractJwt;
  * @param {Object} log
  */
 const initJWTStrategy = (options, passport, getterFn, log = console) => {
-  console.log(
+  log.info(
     "\x1b[33m",
     "Webux-auth - Initializing the JWT Strategy",
     "\x1b[0m"
@@ -38,7 +38,7 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
         },
         async (jwtPayload, cb) => {
           if (getterFn && typeof getterFn === "function") {
-            console.log(
+            log.info(
               "\x1b[33m",
               "Webux-auth - The JWT Strategy uses a custom getter function for the payload",
               "\x1b[0m"
@@ -52,7 +52,7 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
             }
             return cb(null, payload);
           } else {
-            console.log(
+            log.info(
               "\x1b[33m",
               "Webux-auth - The JWT Strategy uses the payload as is",
               "\x1b[0m"

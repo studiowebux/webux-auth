@@ -35,7 +35,7 @@ const initLocalStrategy = (
   registerFn,
   log = console
 ) => {
-  console.log(
+  log.info(
     "\x1b[33m",
     "Webux-auth - Initializing the local Sign In and Sign Up Strategy",
     "\x1b[0m"
