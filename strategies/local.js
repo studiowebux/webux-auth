@@ -36,9 +36,7 @@ const initLocalStrategy = (
   log = console
 ) => {
   log.info(
-    "\x1b[33m",
-    "Webux-auth - Initializing the local Sign In and Sign Up Strategy",
-    "\x1b[0m"
+    `\x1b[33mWebux-auth - Initializing the local Sign In and Sign Up Strategy\x1b[0m`
   );
 
   /* PASSPORT LOCAL SIGNIN */

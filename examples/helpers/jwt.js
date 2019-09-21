@@ -10,16 +10,16 @@ let client;
 const initializeLocalRedis = options => {
   //initialize the Redis connection depending of the node env.
   if (options.mock === true) {
-    console.log("\x1b[33m", "jwt-helper - Starting redis mock", "\x1b[0m");
+    console.log(`\x1b[33mjwt-helper - Starting redis mock\x1b[0m`);
     redis = require("redis-mock");
     client = redis.createClient();
 
     client.on("error", function(err) {
-      console.error("\x1b[31m", "jwt-helper - Redis error", "\x1b[0m");
-      console.error("\x1b[31m", err, "\x1b[0m");
+      console.error(`\x1b[31mjwt-helper - Redis error\x1b[0m`);
+      console.error(`\x1b[31m${err}\x1b[0m`);
     });
   } else {
-    console.log("\x1b[33m", "jwt-helper - Starting redis client", "\x1b[0m");
+    console.log(`\x1b[33mjwt-helper - Starting redis client\x1b[0m`);
     redis = require("redis");
     client = redis.createClient({
       host: options.host,
@@ -28,8 +28,8 @@ const initializeLocalRedis = options => {
       port: options.port
     });
     client.on("error", function(err) {
-      console.error("\x1b[31m", "jwt-helper - Redis error", "\x1b[0m");
-      console.error("\x1b[31m", err, "\x1b[0m");
+      console.error(`\x1b[31mjwt-helper - Redis error\x1b[0m`);
+      console.error(`\x1b[31m${err}\x1b[0m`);
     });
   }
 };

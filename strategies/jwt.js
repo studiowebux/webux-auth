@@ -21,11 +21,7 @@ const ExtractJWT = passportJWT.ExtractJwt;
  * @param {Object} log
  */
 const initJWTStrategy = (options, passport, getterFn, log = console) => {
-  log.info(
-    "\x1b[33m",
-    "Webux-auth - Initializing the JWT Strategy",
-    "\x1b[0m"
-  );
+  log.info(`\x1b[33mWebux-auth - Initializing the JWT Strategy\x1b[0m`);
   try {
     passport.use(
       "jwt",
@@ -39,9 +35,7 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
         async (jwtPayload, cb) => {
           if (getterFn && typeof getterFn === "function") {
             log.info(
-              "\x1b[33m",
-              "Webux-auth - The JWT Strategy uses a custom getter function for the payload",
-              "\x1b[0m"
+              `\x1b[33mWebux-auth - The JWT Strategy uses a custom getter function for the payload\x1b[0m`
             );
             const payload = await getterFn(jwtPayload).catch(e => {
               throw e;
@@ -53,9 +47,7 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
             return cb(null, payload);
           } else {
             log.info(
-              "\x1b[33m",
-              "Webux-auth - The JWT Strategy uses the payload as is",
-              "\x1b[0m"
+              `\x1b[33mWebux-auth - The JWT Strategy uses the payload as is\x1b[0m`
             );
             return cb(null, jwtPayload);
           }
