@@ -1,6 +1,6 @@
 {
   "name": "webux-auth",
-  "version": "1.0.15",
+  "version": "1.0.16",
   "description": "A wrapper for passportJS",
   "main": "index.js",
   "scripts": {
