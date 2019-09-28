@@ -65,7 +65,8 @@ const initLocalStrategy = (
               connected.tokens = await generateJWT(
                 options.jwt,
                 connected,
-                ip
+                ip,
+                log
               ).catch(e => {
                 return done(e);
               });
@@ -111,7 +112,8 @@ const initLocalStrategy = (
                 registered.tokens = await generateJWT(
                   options.jwt,
                   registered,
-                  ip
+                  ip,
+                  log
                 ).catch(e => {
                   return done(e);
                 });
