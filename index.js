@@ -13,8 +13,12 @@ const { initJWTStrategy } = require("./strategies/jwt");
 const { initLocalStrategy } = require("./strategies/local");
 const { lostPassword, retrievePassword } = require("./lib/passwordActions");
 const { activationCode, activateAccount } = require("./lib/accountActions");
-const { revokeToken, refreshAccessToken, checkToken } = require("./lib/jwt");
-const { initializeRedis } = require("./lib/redis");
+const {
+  revokeToken,
+  refreshAccessToken,
+  checkToken,
+  initializeRedis
+} = require("./lib/jwt");
 
 // Export all modules
 module.exports = {

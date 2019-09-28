@@ -20,6 +20,9 @@ const { getConnections, initializeLocalRedis } = require("./helpers/jwt"); // ut
 
 const options = require("./config/auth"); // All the options related to the authentication module
 
+initializeRedis(options.redis); // this is for the webux-auth module
+initializeLocalRedis(options.redis); // if needed to retrieve the connections (I recommend to use a database for that)
+
 const {
   lostActivationFn,
   accountActivationFn
@@ -33,7 +36,9 @@ const {
 const { loginFn, registerFn, deserializeFn } = require("./helpers/local"); // User functions for local authentication (if needed)
 
 const { errorHandler } = require("./helpers/errorHandler"); // User function custom errorHandler
-const { /*errorHandler *You can also use this one*,*/ globalErrorHandler } = require("webux-errorhandler"); // TO handle the errors globally
+const {
+  /*errorHandler *You can also use this one*,*/ globalErrorHandler
+} = require("webux-errorhandler"); // TO handle the errors globally
 
 // Local strategy
 initLocalStrategy(options, passport, loginFn, registerFn);
@@ -41,9 +46,6 @@ initLocalStrategy(options, passport, loginFn, registerFn);
 // JWT strategy
 initJWTStrategy(options, passport, deserializeFn); // with the getter function, if you have stored the minimum in the JWT token
 //initJWTStrategy(options, passport); // without the getter function, if you have stored everything you need in the JWT token
-
-initializeRedis(options.redis); // this is for the webux-auth module
-initializeLocalRedis(options.redis); // if needed to retrieve the connections (I recommend to use a database for that)
 
 const isAuth = isAuthenticated(options.jwt, passport, errorHandler); // The middleware function to check if the user is authenticated
 
@@ -112,7 +114,7 @@ app.post("/signin", (req, res, next) => {
     (err, user) => {
       try {
         if (err) {
-          return next(errorHandler(400, "Incorrect Credentials", {}, error));
+          throw err;
         } else if (!err && user) {
           req.login(user, {
             session: false
@@ -130,6 +132,7 @@ app.post("/signin", (req, res, next) => {
           );
         }
       } catch (e) {
+        console.error(e);
         return next(errorHandler(400, "Incorrect Credentials", {}, e));
       }
     }
