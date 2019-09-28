@@ -15,6 +15,7 @@ const ExtractJWT = passportJWT.ExtractJwt;
  * This function initialize the JWT strategy using the passport function
  * You can provide a custom function to get the user payload, or use only the jwt payload.
  * the custom function must be defined like : function(payload){return Promise()}
+ * @public
  * @param {Object} options
  * @param {Function} passport
  * @param {Function} getterFn
@@ -36,6 +37,9 @@ const initJWTStrategy = (options, passport, getterFn, log = console) => {
           if (getterFn && typeof getterFn === "function") {
             log.info(
               `\x1b[33mWebux-auth - The JWT Strategy uses a custom getter function for the payload\x1b[0m`
+            );
+            log.debug(
+              `initJWTStrategy - 'getterFn' => getterFn(jwtPayload = Object){return Promise()}`
             );
             const payload = await getterFn(jwtPayload).catch(e => {
               throw e;

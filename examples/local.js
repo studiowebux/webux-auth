@@ -9,8 +9,8 @@ const {
   isAuthenticated,
   retrievePassword,
   lostPassword,
-  RefreshAccessToken,
-  RevokeToken,
+  refreshAccessToken,
+  revokeToken,
   activateAccount,
   lostActivationCode,
   initializeRedis
@@ -33,7 +33,7 @@ const {
 const { loginFn, registerFn, deserializeFn } = require("./helpers/local"); // User functions for local authentication (if needed)
 
 const { errorHandler } = require("./helpers/errorHandler"); // User function custom errorHandler
-const { /*errorHandler,*/ globalErrorHandler } = require("webux-errorhandler"); // TO handle the errors globally
+const { /*errorHandler *You can also use this one*,*/ globalErrorHandler } = require("webux-errorhandler"); // TO handle the errors globally
 
 // Local strategy
 initLocalStrategy(options, passport, loginFn, registerFn);
@@ -310,7 +310,7 @@ app.post("/activate-account", async (req, res, next) => {
 
 app.post("/revoke-refresh", isAuth, async (req, res, next) => {
   try {
-    const info = await RevokeToken(req.body.refreshToken, req.user.id).catch(
+    const info = await revokeToken(req.body.refreshToken, req.user.id).catch(
       e => {
         throw e;
       }
@@ -335,7 +335,7 @@ app.post("/revoke-refresh", isAuth, async (req, res, next) => {
 
 app.post("/revoke-access", isAuth, async (req, res, next) => {
   try {
-    const info = await RevokeToken(req.body.accessToken, req.user.id).catch(
+    const info = await revokeToken(req.body.accessToken, req.user.id).catch(
       e => {
         throw e;
       }
@@ -382,7 +382,7 @@ app.post("/logout", isAuth, async (req, res, next) => {
 
 app.post("/refresh", async (req, res, next) => {
   try {
-    const newAccess = await RefreshAccessToken(
+    const newAccess = await refreshAccessToken(
       options.jwt,
       req.body.refreshToken,
       req.body.userID

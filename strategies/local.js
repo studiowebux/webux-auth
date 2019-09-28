@@ -9,8 +9,13 @@
 
 const LocalStrategy = require("passport-local").Strategy;
 const { checkPassword } = require("../lib/passwordStrategy");
-const { GenerateJWT } = require("../lib/jwt");
+const { generateJWT } = require("../lib/jwt");
 
+/**
+ * Return the IP of the client
+ * @private
+ * @param {Object} req Express req object
+ */
 function setIp(req) {
   return (
     req.headers["x-forwarded-for"] ||
@@ -22,6 +27,7 @@ function setIp(req) {
 
 /**
  * It initializes the local sign in and sign up functions
+ * @public
  * @param {Object} options The local configuration (Username and password field names)
  * @param {Object} passport The Passport Object
  * @param {Function} loginFn The Login Function (username, password, req)=>{return Promise()}
@@ -51,10 +57,12 @@ const initLocalStrategy = (
       (req, username, password, done) => {
         try {
           const ip = setIp(req);
-
+          log.debug(
+            `loginFn(username = String, password = String, req = Object) {return Promise()}`
+          );
           loginFn(username, password, req)
             .then(async connected => {
-              connected.tokens = await GenerateJWT(
+              connected.tokens = await generateJWT(
                 options.jwt,
                 connected,
                 ip
@@ -92,13 +100,15 @@ const initLocalStrategy = (
           ) {
             throw new Error(options.local.passwordStrategy.message);
           }
-
+          log.debug(
+            `registerFn(username = String, password = String, req = Object) {return Promise()}`
+          );
           registerFn(username, password, req)
             .then(async registered => {
               if (options.local.autoLogonOnRegister) {
                 var ip = setIp(req);
 
-                registered.tokens = await GenerateJWT(
+                registered.tokens = await generateJWT(
                   options.jwt,
                   registered,
                   ip

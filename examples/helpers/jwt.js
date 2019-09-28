@@ -7,31 +7,26 @@ let redis;
 let client;
 
 //initialize the Redis connection depending of the node env.
-const initializeLocalRedis = options => {
-  //initialize the Redis connection depending of the node env.
+const initializeLocalRedis = (options, log = console) => {
   if (options.mock === true) {
-    console.log(`\x1b[33mjwt-helper - Starting redis mock\x1b[0m`);
+    log.info(`\x1b[33mWebux-auth - Starting redis mock\x1b[0m`);
     redis = require("redis-mock");
-    client = redis.createClient();
-
-    client.on("error", function(err) {
-      console.error(`\x1b[31mjwt-helper - Redis error\x1b[0m`);
-      console.error(`\x1b[31m${err}\x1b[0m`);
-    });
   } else {
-    console.log(`\x1b[33mjwt-helper - Starting redis client\x1b[0m`);
+    log.info(`\x1b[33mWebux-auth - Starting redis client\x1b[0m`);
     redis = require("redis");
-    client = redis.createClient({
-      host: options.host,
-      no_ready_check: options.no_ready_check,
-      password: options.password,
-      port: options.port
-    });
-    client.on("error", function(err) {
-      console.error(`\x1b[31mjwt-helper - Redis error\x1b[0m`);
-      console.error(`\x1b[31m${err}\x1b[0m`);
-    });
   }
+
+  client = redis.createClient({
+    host: options.host,
+    no_ready_check: options.no_ready_check,
+    password: options.password,
+    port: options.port
+  });
+
+  client.on("error", function(err) {
+    log.error(`\x1b[31mWebux-auth - Redis error\x1b[0m`);
+    log.error(`\x1b[31m${err}\x1b[0m`);
+  });
 };
 
 // Get the tokens from Redis and list them to the user
