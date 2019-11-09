@@ -7,7 +7,7 @@ Redis is use to invalidate the access/refresh tokens.
 ## Installation
 
 ```bash
-npm i --save webux-auth
+npm i --save @studiowebux/auth
 ```
 
 ## Usage

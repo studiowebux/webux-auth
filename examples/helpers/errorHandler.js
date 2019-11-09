@@ -1,5 +1,5 @@
-// This function has been taken from the webux-errorhandler module
-// You can use the module webux-errorhandler, or use this one or create your own,
+// This function has been taken from the @studiowebux/errorhandler module
+// You can use the module @studiowebux/errorhandler, or use this one or create your own,
 // but keep in mind, the isAuthenticated function will require 4 parameters,
 
 /**

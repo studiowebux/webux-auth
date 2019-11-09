@@ -14,13 +14,13 @@ const {
   activateAccount,
   lostActivationCode,
   initializeRedis
-} = require("../index"); // webux-auth
+} = require("../index"); // @studiowebux/auth
 
 const { getConnections, initializeLocalRedis } = require("./helpers/jwt"); // utilities to get the current connections
 
 const options = require("./config/auth"); // All the options related to the authentication module
 
-initializeRedis(options.redis); // this is for the webux-auth module
+initializeRedis(options.redis); // this is for the @studiowebux/auth module
 initializeLocalRedis(options.redis); // if needed to retrieve the connections (I recommend to use a database for that)
 
 const {
@@ -38,7 +38,7 @@ const { loginFn, registerFn, deserializeFn } = require("./helpers/local"); // Us
 const { errorHandler } = require("./helpers/errorHandler"); // User function custom errorHandler
 const {
   /*errorHandler *You can also use this one*,*/ globalErrorHandler
-} = require("webux-errorhandler"); // TO handle the errors globally
+} = require("@studiowebux/errorhandler"); // TO handle the errors globally
 
 // Local strategy
 initLocalStrategy(options, passport, loginFn, registerFn);
